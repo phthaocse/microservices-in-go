@@ -2,7 +2,8 @@ package db
 
 import (
 	"context"
-	"github.com/huseyinbabal/microservices/order/internal/application/core/domain"
+	"github.com/huseyinbabal/microservices/payment/internal/application/core/domain"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,13 +22,16 @@ type MongoConfig struct {
 	User       string        `yaml:"user"`
 	Pass       string        `yaml:"pass"`
 	Timeout    time.Duration `yaml:"timeout"`
-	Database   string        `yaml:"database"`
+	Database   string        `yaml:"dbname"`
 }
 
 func NewMongoAdapter(config *MongoConfig) (*MongoAdapter, error) {
 
-	clientOption := &options.ClientOptions{}
-
+	clientOption := &options.ClientOptions{
+		Hosts:   config.Address,
+		Timeout: &config.Timeout,
+	}
+	log.Info(config.Address)
 	// set monitoring
 
 	// set Authen
@@ -43,72 +47,56 @@ func NewMongoAdapter(config *MongoConfig) (*MongoAdapter, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	log.Info("connect to mongodb\n")
+	log.Infof("mongo config: %v\n", config)
 	client, err := mongo.Connect(ctx, clientOption)
 	if err != nil {
 		return nil, err
 	}
-
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Connected to MongoDB")
 	return &MongoAdapter{db: client.Database(config.Database)}, nil
 }
 
-type OrderMongo struct {
-	ID         int64       `bson:"_id"`
-	CustomerID int64       `bson:"customer_id"`
-	Status     string      `bson:"status"`
-	OrderItems []OrderItem `bson:"order_items"`
-
-	CreatedAt time.Time `bson:"created_at"`
+type PaymentMongo struct {
+	ID         int64     `bson:"_id"`
+	CustomerID int64     `bson:"customer_id"`
+	Status     string    `bson:"status"`
+	OrderID    int64     `bson:"order_id"`
+	TotalPrice float32   `bson:"total_price"`
+	CreatedAt  time.Time `bson:"created_at"`
 }
 
-type OrderItemMongo struct {
-	ProductCode string  `bson:"product_code"`
-	UnitPrice   float32 `bson:"unit_price"`
-	Quantity    int32   `bson:"quantity"`
-	OrderID     uint    `bson:"order_id"`
-}
-
-func (a *MongoAdapter) Get(ctx context.Context, id int64) (domain.Order, error) {
-	var orderEntity OrderMongo
-	var orderItems []domain.OrderItem
-	err := a.db.Collection("orders").FindOne(ctx, bson.M{"_id": id}).Decode(&orderEntity)
+func (a *MongoAdapter) Get(ctx context.Context, id string) (domain.Payment, error) {
+	var paymentEntity PaymentMongo
+	err := a.db.Collection("payment").FindOne(ctx, bson.M{"_id": id}).Decode(&paymentEntity)
 	if err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
-
-	for _, orderItem := range orderEntity.OrderItems {
-		orderItems = append(orderItems, domain.OrderItem{
-			ProductCode: orderItem.ProductCode,
-			UnitPrice:   orderItem.UnitPrice,
-			Quantity:    orderItem.Quantity,
-		})
+	payment := domain.Payment{
+		ID:         int64(paymentEntity.ID),
+		CustomerID: paymentEntity.CustomerID,
+		Status:     paymentEntity.Status,
+		OrderId:    paymentEntity.OrderID,
+		TotalPrice: paymentEntity.TotalPrice,
+		CreatedAt:  paymentEntity.CreatedAt.UnixNano(),
 	}
-	order := domain.Order{
-		ID:         int64(orderEntity.ID),
-		CustomerID: orderEntity.CustomerID,
-		Status:     orderEntity.Status,
-		OrderItems: orderItems,
-		CreatedAt:  orderEntity.CreatedAt.UnixNano(),
-	}
-	return order, nil
+	return payment, nil
 }
 
-func (a *MongoAdapter) Save(ctx context.Context, order *domain.Order) error {
-	var orderItems []OrderItem
-	for _, orderItem := range order.OrderItems {
-		orderItems = append(orderItems, OrderItem{
-			ProductCode: orderItem.ProductCode,
-			UnitPrice:   orderItem.UnitPrice,
-			Quantity:    orderItem.Quantity,
-		})
-	}
-	orderModel := OrderMongo{
+func (a *MongoAdapter) Save(ctx context.Context, payment *domain.Payment) error {
+	paymentModel := PaymentMongo{
 		ID:         time.Now().UnixNano(),
-		CustomerID: order.CustomerID,
-		Status:     order.Status,
-		OrderItems: orderItems,
+		CustomerID: payment.CustomerID,
+		Status:     payment.Status,
+		OrderID:    payment.OrderId,
+		TotalPrice: payment.TotalPrice,
 	}
 
-	_, err := a.db.Collection("order").InsertOne(ctx, &orderModel)
+	_, err := a.db.Collection("payment").InsertOne(ctx, &paymentModel)
 
 	return err
 }

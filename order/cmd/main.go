@@ -7,15 +7,12 @@ import (
 	"github.com/huseyinbabal/microservices/order/internal/adapters/payment"
 	"github.com/huseyinbabal/microservices/order/internal/application/core/api"
 	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
-	"os"
 )
 
 const (
@@ -41,15 +38,15 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 	return tp, nil
 }
 
-func init() {
-	log.SetFormatter(customLogger{
-		formatter: log.JSONFormatter{FieldMap: log.FieldMap{
-			"msg": "message",
-		}},
-	})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
-}
+//func init() {
+//	log.SetFormatter(customLogger{
+//		formatter: log.JSONFormatter{FieldMap: log.FieldMap{
+//			"msg": "message",
+//		}},
+//	})
+//	log.SetOutput(os.Stdout)
+//	log.SetLevel(log.InfoLevel)
+//}
 
 type customLogger struct {
 	formatter log.JSONFormatter
@@ -65,17 +62,22 @@ func (l customLogger) Format(entry *log.Entry) ([]byte, error) {
 }
 
 func main() {
-	tp, err := tracerProvider("http://jaeger-otel.jaeger.svc.cluster.local:14278/api/traces")
-	if err != nil {
-		log.Fatal(err)
-	}
+	//tp, err := tracerProvider("http://jaeger-otel.jaeger.svc.cluster.local:14278/api/traces")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//otel.SetTracerProvider(tp)
+	//otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+	mongoConfig := config.ReadMongoConfig()
+	//dbAdapter, err := db.NewAdapter(config.GetDataSourceURL())
+	//if err != nil {
+	//	log.Fatalf("Failed to connect to database. Error: %v", err)
+	//}
 
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
-
-	dbAdapter, err := db.NewAdapter(config.GetDataSourceURL())
+	mongoDBAdapter, err := db.NewMongoAdapter(mongoConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to database. Error: %v", err)
+		log.Fatalf("failed to connect to mongodb: %v", err)
 	}
 
 	paymentAdapter, err := payment.NewAdapter(config.GetPaymentServiceUrl())
@@ -83,7 +85,7 @@ func main() {
 		log.Fatalf("Failed to initialize payment stub. Error: %v", err)
 	}
 
-	application := api.NewApplication(dbAdapter, paymentAdapter)
+	application := api.NewApplication(mongoDBAdapter, paymentAdapter)
 	grpcAdapter := grpc.NewAdapter(application, config.GetApplicationPort())
 	grpcAdapter.Run()
 }

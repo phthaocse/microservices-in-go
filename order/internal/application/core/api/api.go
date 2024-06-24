@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/dreamlu/gt/tool/log"
 	"github.com/huseyinbabal/microservices/order/internal/application/core/domain"
 	"github.com/huseyinbabal/microservices/order/internal/ports"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -24,6 +25,7 @@ func NewApplication(db ports.DBPort, payment ports.PaymentPort) *Application {
 func (a Application) PlaceOrder(ctx context.Context, order domain.Order) (domain.Order, error) {
 	err := a.db.Save(ctx, &order)
 	if err != nil {
+		log.Info(err)
 		return domain.Order{}, err
 	}
 	paymentErr := a.payment.Charge(ctx, &order)

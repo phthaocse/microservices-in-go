@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/huseyinbabal/microservices-proto/golang/payment"
 	"github.com/huseyinbabal/microservices/order/internal/application/core/domain"
+	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,6 +24,7 @@ func NewAdapter(paymentServiceUrl string) (*Adapter, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info("connected to payment service")
 	client := payment.NewPaymentClient(conn)
 	return &Adapter{payment: client}, nil
 }

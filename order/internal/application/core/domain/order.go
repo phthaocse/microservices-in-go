@@ -5,17 +5,17 @@ import (
 )
 
 type Order struct {
-	ID         int64       `json:"id"`
-	CustomerID int64       `json:"customer_id"`
-	Status     string      `json:"status"`
-	OrderItems []OrderItem `json:"order_items"`
-	CreatedAt  int64       `json:"created_at"`
+	ID         int64       `json:"id" bson:"_id"`
+	CustomerID int64       `json:"customer_id" bson:"customer_id"`
+	Status     string      `json:"status" bson:"status"`
+	OrderItems []OrderItem `json:"order_items" bson:"order_items"`
+	CreatedAt  int64       `json:"created_at" bson:"created_at"`
 }
 
 type OrderItem struct {
-	ProductCode string  `json:"product_code"`
-	UnitPrice   float32 `json:"unit_price"`
-	Quantity    int32   `json:"quantity"`
+	ProductCode string  `json:"product_code" bson:"product_code"`
+	UnitPrice   float32 `json:"unit_price" bson:"unit_price"`
+	Quantity    int32   `json:"quantity" bson:"quantity"`
 }
 
 func NewOrder(customerId int64, orderItems []OrderItem) Order {

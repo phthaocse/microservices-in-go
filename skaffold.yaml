@@ -16,6 +16,6 @@ deploy:
   kubectl:
     defaultNamespace: default
     manifests:
-    - mysql/deployment.yaml
+#    - mysql/deployment.yaml
     - order/deployment.yaml
     - payment/deployment.yaml

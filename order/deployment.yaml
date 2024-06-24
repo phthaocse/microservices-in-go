@@ -9,9 +9,9 @@ spec:
     service: order
   ports:
     - name: grpc
-      port: 8080
+      port: 50051
       protocol: TCP
-      targetPort: 8080
+      targetPort: 50051
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -20,7 +20,7 @@ metadata:
   labels:
     service: order
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       service: order
@@ -29,24 +29,27 @@ spec:
       labels:
         service: order
     spec:
-      initContainers:
-      - name: mysql-check
-        image: busybox:1.28
-        command: ['sh', '-c', 'until nslookup mysql; do echo waiting for mysql; sleep 10; done;']
       containers:
       - name: order
         image: order
         env:
           - name: APPLICATION_PORT
-            value: "8080"
+            value: "50051"
           - name: ENV
             value: "prod"
           - name: DATA_SOURCE_URL
             value: "root:s3cr3t@tcp(mysql:3306)/orders?charset=utf8mb4&parseTime=True&loc=Local"
           - name: PAYMENT_SERVICE_URL
-            value: "payment:8081"
+            value: "payment:50051"
+          - name: MONGO_ADDRESS
+            value: '["mongo.default.svc.cluster.local:27017"]'
+          - name: MONGO_INITDB_ROOT_USERNAME
+            value: adminuser
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            value: password123
+
         ports:
-          - containerPort: 8080
+          - containerPort: 50051
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -67,7 +70,7 @@ spec:
               service:
                 name: order
                 port:
-                  number: 8080
+                  number: 50051
   tls:
     - hosts:
         - ingress.local
