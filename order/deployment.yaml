@@ -40,7 +40,7 @@ spec:
           - name: DATA_SOURCE_URL
             value: "root:s3cr3t@tcp(mysql:3306)/orders?charset=utf8mb4&parseTime=True&loc=Local"
           - name: PAYMENT_SERVICE_URL
-            value: "xds:///payment"
+            value: "xds:///payment-listener"
           - name: MONGO_ADDRESS
             value: '["mongo.default.svc.cluster.local:27017"]'
           - name: MONGO_INITDB_ROOT_USERNAME

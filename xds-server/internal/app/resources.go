@@ -7,9 +7,11 @@ import (
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 
@@ -24,7 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 )
 
@@ -169,26 +170,34 @@ func createRoute(routeConfigName, virtualHostName, listenerName, clusterName str
 	}
 	return rds
 }
+func makeConfigSource() *core.ConfigSource {
+	source := &core.ConfigSource{
+		ConfigSourceSpecifier: &core.ConfigSource_Ads{
+			Ads: &core.AggregatedConfigSource{},
+		}}
+
+	return source
+}
 
 func createListener(listenerName string, clusterName string, routeConfigName string) []types.Resource {
 	logger.Logger.Debug("Creating LISTENER", zap.String("name", listenerName))
-	hcRds := &hcm.HttpConnectionManager_Rds{
-		Rds: &hcm.Rds{
-			RouteConfigName: routeConfigName,
-			ConfigSource: &core.ConfigSource{
-				ConfigSourceSpecifier: &core.ConfigSource_Ads{
-					Ads: &core.AggregatedConfigSource{},
-				},
+	routerConfig, _ := anypb.New(&router.Router{})
+	logger.Logger.Debug("RouterConfig", zap.String("router config", routerConfig.String()))
+	manager := &hcm.HttpConnectionManager{
+		CodecType:  hcm.HttpConnectionManager_AUTO,
+		StatPrefix: "http",
+		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
+			Rds: &hcm.Rds{
+				ConfigSource:    makeConfigSource(),
+				RouteConfigName: routeConfigName,
 			},
 		},
+		HttpFilters: []*hcm.HttpFilter{{
+			Name:       "http-router",
+			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerConfig},
+		}},
 	}
-
-	manager := &hcm.HttpConnectionManager{
-		CodecType:      hcm.HttpConnectionManager_AUTO,
-		RouteSpecifier: hcRds,
-	}
-
-	pbst, err := ptypes.MarshalAny(manager)
+	pbst, err := anypb.New(manager)
 	if err != nil {
 		panic(err)
 	}
@@ -247,7 +256,7 @@ func GenerateSnapshot(services []string) (*cache.Snapshot, error) {
 	version := uuid.New()
 	logger.Logger.Debug("Creating Snapshot", zap.String("version", version.String()), zap.Any("EDS", eds), zap.Any("CDS", cds), zap.Any("RDS", rds), zap.Any("LDS", lds))
 	resources := map[resource.Type][]types.Resource{
-		resource.ClusterType:  eds,
+		resource.ClusterType:  cds,
 		resource.RouteType:    rds,
 		resource.ListenerType: lds,
 		resource.EndpointType: eds,
