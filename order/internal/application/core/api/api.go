@@ -30,6 +30,7 @@ func (a Application) PlaceOrder(ctx context.Context, order domain.Order) (domain
 	}
 	paymentErr := a.payment.Charge(ctx, &order)
 	if paymentErr != nil {
+		log.Error(paymentErr)
 		st, _ := status.FromError(paymentErr)
 		fieldErr := &errdetails.BadRequest_FieldViolation{
 			Field:       "payment",

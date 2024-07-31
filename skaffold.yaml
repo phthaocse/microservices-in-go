@@ -12,10 +12,15 @@ build:
     context: payment
     docker:
       dockerfile: Dockerfile
+  - image: xds-server
+    context: xds-server
+    docker:
+      dockerfile: Dockerfile
 deploy:
   kubectl:
     defaultNamespace: default
     manifests:
 #    - mysql/deployment.yaml
+    - xds-server/deployment.yaml
     - order/deployment.yaml
     - payment/deployment.yaml

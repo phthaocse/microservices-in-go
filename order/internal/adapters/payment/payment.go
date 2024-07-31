@@ -5,9 +5,9 @@ import (
 	"github.com/huseyinbabal/microservices-proto/golang/payment"
 	"github.com/huseyinbabal/microservices/order/internal/application/core/domain"
 	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	_ "google.golang.org/grpc/xds" // To install the xds resolvers and balancers.
 )
 
 type Adapter struct {
@@ -15,12 +15,9 @@ type Adapter struct {
 }
 
 func NewAdapter(paymentServiceUrl string) (*Adapter, error) {
-	var opts []grpc.DialOption
-	opts = append(opts,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-	)
-	conn, err := grpc.Dial(paymentServiceUrl, opts...)
+	creds := insecure.NewCredentials()
+	log.Info("connecting to payment service %s", paymentServiceUrl)
+	conn, err := grpc.NewClient(paymentServiceUrl, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, err
 	}

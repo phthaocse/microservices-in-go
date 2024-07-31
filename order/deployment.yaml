@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: order
   labels:
-    service: order
+    service: &name order
 spec:
   selector:
-    service: order
+    service: *name
   ports:
     - name: grpc
       port: 50051
@@ -16,22 +16,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order
+  name: &name order
   labels:
-    service: order
+    service: *name
 spec:
   replicas: 3
   selector:
     matchLabels:
-      service: order
+      service: *name
   template:
     metadata:
       labels:
-        service: order
+        service: *name
     spec:
       containers:
-      - name: order
-        image: order
+      - name: *name
+        image: *name
         env:
           - name: APPLICATION_PORT
             value: "50051"
@@ -40,7 +40,7 @@ spec:
           - name: DATA_SOURCE_URL
             value: "root:s3cr3t@tcp(mysql:3306)/orders?charset=utf8mb4&parseTime=True&loc=Local"
           - name: PAYMENT_SERVICE_URL
-            value: "payment:50051"
+            value: "xds:///payment"
           - name: MONGO_ADDRESS
             value: '["mongo.default.svc.cluster.local:27017"]'
           - name: MONGO_INITDB_ROOT_USERNAME
@@ -50,6 +50,13 @@ spec:
 
         ports:
           - containerPort: 50051
+        volumeMounts:
+          - mountPath: /var/run/config
+            name: client-config
+      volumes:
+        - name: client-config
+          configMap:
+            name: order-client-config
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -59,7 +66,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: GRPC
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: selfsigned-issuer
-  name: order
+  name: &name order
 spec:
   rules:
     - http:
@@ -68,10 +75,42 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: order
+                name: *name
                 port:
                   number: 50051
   tls:
     - hosts:
         - ingress.local
       secretName: order-tls
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-client-config
+data:
+  app.yaml: |
+    order:
+      host: 'xds:///payment-server-listener'
+  xds_bootstrap.json: |
+    {
+      "xds_servers": [
+        {
+          "server_uri": "xds-server.default.svc.cluster.local:18000",  
+          "channel_creds": [
+            {
+              "type": "insecure"
+            }
+          ]
+        }
+      ],
+      
+      "node": {
+        "id": "25386353-c3e2-42f5-ad65-2b003c3386f5",
+        "metadata": {
+          "TEST_PROJECT_ID": "We45523"
+        },
+        "locality": {
+          "zone": "my-zone"
+        }
+      }
+    }
