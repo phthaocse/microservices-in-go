@@ -42,7 +42,7 @@ func main() {
 		Requests: 0,
 	}
 
-	snapshotCache := cache.NewSnapshotCache(true, cache.IDHash{}, l)
+	snapshotCache := cache.NewSnapshotCache(false, cache.IDHash{}, l)
 
 	srv := xds.NewServer(ctx, snapshotCache, cb)
 

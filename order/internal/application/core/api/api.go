@@ -11,14 +11,16 @@ import (
 )
 
 type Application struct {
-	db      ports.DBPort
-	payment ports.PaymentPort
+	db       ports.DBPort
+	payment  ports.PaymentPort
+	shipping ports.ShippingPort
 }
 
-func NewApplication(db ports.DBPort, payment ports.PaymentPort) *Application {
+func NewApplication(db ports.DBPort, payment ports.PaymentPort, shipping ports.ShippingPort) *Application {
 	return &Application{
-		db:      db,
-		payment: payment,
+		db:       db,
+		payment:  payment,
+		shipping: shipping,
 	}
 }
 
@@ -41,6 +43,10 @@ func (a Application) PlaceOrder(ctx context.Context, order domain.Order) (domain
 		orderStatus := status.New(codes.InvalidArgument, "order creation failed")
 		statusWithDetails, _ := orderStatus.WithDetails(badReq)
 		return domain.Order{}, statusWithDetails.Err()
+	}
+	shippingErr := a.shipping.CreateShipping(ctx, order.ID)
+	if shippingErr != nil {
+		return domain.Order{}, shippingErr
 	}
 	return order, nil
 }

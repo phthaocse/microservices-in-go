@@ -17,7 +17,7 @@ metadata:
   labels:
     app: xds-server
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: xds-server
@@ -88,5 +88,5 @@ data:
       port: 18000
       maxConcurrentStreams: 1000
     upstreamServices:
-    #  - 'order'
+      - 'shipping'
       - 'payment'

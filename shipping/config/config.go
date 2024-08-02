@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/huseyinbabal/microservices/order/internal/adapters/db"
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"
@@ -29,14 +28,6 @@ func GetApplicationPort() int {
 
 	return port
 }
-
-func GetPaymentServiceUrl() string {
-	return getEnvironmentValue("PAYMENT_SERVICE_URL")
-}
-
-func GetShippingServiceUrl() string {
-	return getEnvironmentValue("SHIPPING_SERVICE_URL")
-}
 func getEnvironmentValue(key string) string {
 	if os.Getenv(key) == "" {
 		log.Fatalf("%s environment variable is missing.", key)
@@ -45,18 +36,18 @@ func getEnvironmentValue(key string) string {
 	return os.Getenv(key)
 }
 
-func ReadMongoConfig() *db.MongoConfig {
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	path := filepath.Join(dir, "config")
-	fmt.Println("config path dir: ", path)
-	//Get base config
-	config := new(db.MongoConfig)
-	readConfig(path, "mongodb.yaml", config)
-	return config
-}
+//func ReadMongoConfig() *db.MongoConfig {
+//	dir, err := os.Getwd()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	path := filepath.Join(dir, "config")
+//	fmt.Println("config path dir: ", path)
+//	//Get base config
+//	config := new(db.MongoConfig)
+//	readConfig(path, "mongodb.yaml", config)
+//	return config
+//}
 
 func envMapper(input string) string {
 

@@ -41,6 +41,8 @@ spec:
             value: "root:s3cr3t@tcp(mysql:3306)/orders?charset=utf8mb4&parseTime=True&loc=Local"
           - name: PAYMENT_SERVICE_URL
             value: "xds:///payment-listener"
+          - name: SHIPPING_SERVICE_URL
+            value: "xds:///shipping-listener"
           - name: MONGO_ADDRESS
             value: '["mongo.default.svc.cluster.local:27017"]'
           - name: MONGO_INITDB_ROOT_USERNAME
@@ -88,14 +90,27 @@ kind: ConfigMap
 metadata:
   name: order-client-config
 data:
-  app.yaml: |
-    order:
-      host: 'xds:///payment-server-listener'
   xds_bootstrap.json: |
     {
       "xds_servers": [
         {
-          "server_uri": "xds-server.default.svc.cluster.local:18000",  
+          "server_uri": "10.244.0.132:18000",  
+          "channel_creds": [
+            {
+              "type": "insecure"
+            }
+          ]
+        },
+        {
+          "server_uri": "10.244.0.131:18000",
+          "channel_creds": [
+            {
+              "type": "insecure"
+            }
+          ]
+        },
+        {
+          "server_uri": "10.244.0.130:18000",
           "channel_creds": [
             {
               "type": "insecure"

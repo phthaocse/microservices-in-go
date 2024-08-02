@@ -12,6 +12,10 @@ build:
     context: payment
     docker:
       dockerfile: Dockerfile
+  - image: shipping
+    context: shipping
+    docker:
+      dockerfile: Dockerfile
   - image: xds-server
     context: xds-server
     docker:
@@ -24,3 +28,4 @@ deploy:
     - xds-server/deployment.yaml
     - order/deployment.yaml
     - payment/deployment.yaml
+    - shipping/deployment.yaml
